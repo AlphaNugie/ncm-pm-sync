@@ -1,0 +1,19 @@
+{
+  "api_base": "http://localhost:3000",
+  "cookie_file": "cookies.json",
+  "state_file": "state.json",
+  "history_file": "sync_history.jsonl",
+  "playlist_name": "私信收藏",
+  "playlist_id": null,
+  "poll_limit": 30,
+  "max_conversations_per_sync": 20,
+  "history_limit_per_chat": 30,
+  "request_interval_sec": 2.0,
+  "album_mode": "all",
+  "max_album_tracks": 20,
+  "also_add_shared_playlist": false,
+  "private_msg_path": "/msg/private",
+  "private_history_path": "/msg/private/history",
+  "max_state_ids": 2000,
+  "dry_run": false
+}

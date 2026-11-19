@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>预览 · Spotify 风格 — 网易云私信 → 歌单</title>
+<!--
+  设计规范来源：awesome-design-md / designs/spotify.md（MIT）
+  落地自检（对照 Spotify Do/Don't）：
+  ✓ 近黑画布 #121212，卡片 #181818/#1f1f1f 靠阴影分层，无裸灰边框
+  ✓ 绿色 #1ed760 仅用于功能强调（主 CTA / 待入库 / 连接状态），无装饰用绿
+  ✓ 按钮全胶囊（9999px），主 CTA 绿底黑字；标签用大写+字距（对中文无效、对拉丁生效）
+  ✓ 字号紧凑 10.5–24px，粗细二元（700/400）
+  ✓ 重型阴影 0.3–0.5 透明度
+  ✓ 无第二品牌色；语义色仅红 #f3727f / 橙 #ffa42b / 蓝 #539df5 用于状态
+  本文件为纯静态预览（示例数据取自真实采集结果），不接入后端。
+-->
+<style>
+:root{
+  --bg:#121212; --s1:#181818; --s2:#1f1f1f; --s3:#252525;
+  --tx:#ffffff; --tx2:#b3b3b3; --tx3:#cbcbcb;
+  --green:#1ed760; --green-b:#1db954;
+  --red:#f3727f; --orange:#ffa42b; --blue:#539df5;
+  --bd:#4d4d4d; --bd2:#7c7c7c;
+  --sh-h:rgba(0,0,0,.5) 0 8px 24px;
+  --sh-m:rgba(0,0,0,.3) 0 8px 8px;
+  --sh-in:rgb(18,18,18) 0 1px 0, rgb(124,124,124) 0 0 0 1px inset;
+  --font:"SpotifyMixUI","CircularSp","Helvetica Neue",Helvetica,Arial,"Hiragino Sans","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{background:var(--bg); color:var(--tx); font:400 16px/1.4 var(--font); padding:24px 28px 48px}
+
+/* ---------- 顶部 ---------- */
+header{display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:22px}
+.brand{display:flex; align-items:center; gap:12px}
+.logo{width:38px; height:38px; border-radius:50%; background:var(--green); position:relative}
+.logo::after{content:""; position:absolute; inset:10px; border-radius:50%;
+  border:3px solid #000; border-top-color:transparent; transform:rotate(-30deg)}
+h1{font-size:24px; font-weight:700; letter-spacing:.2px}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-left:auto}
+.chip{display:inline-flex; align-items:center; gap:7px; background:var(--s1); border-radius:9999px;
+  padding:6px 14px; font-size:12px; font-weight:400; color:var(--tx2); box-shadow:var(--sh-m)}
+.chip b{color:var(--tx); font-weight:700}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--green)}
+.dot.bad{background:var(--red)}
+
+/* ---------- 布局 ---------- */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:18px}
+.card{background:var(--s1); border-radius:8px; padding:22px; box-shadow:var(--sh-m)}
+.card.wide{grid-column:1/-1}
+h2{font-size:18px; font-weight:600; line-height:1.3; margin-bottom:14px; display:flex; align-items:center; gap:10px}
+h2 .idx{display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+  border-radius:50%; background:var(--s2); color:var(--green); font-size:11px; font-weight:700}
+.hint{font-size:12px; color:var(--tx2); margin-top:10px; line-height:1.5}
+code{font:400 12px/1.4 Consolas,monospace; background:var(--s2); color:var(--tx3); padding:2px 7px; border-radius:4px}
+
+/* ---------- 表单 ---------- */
+label{display:block; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--tx2); margin:14px 0 6px}
+input,select{width:100%; background:var(--s2); color:var(--tx); border:none; border-radius:4px;
+  padding:11px 13px; font:400 14px/1.2 var(--font); box-shadow:var(--sh-in); outline:none}
+input:focus,select:focus{box-shadow:0 0 0 2px var(--green-b)}
+.row{display:flex; gap:10px} .row>*{flex:1}
+.check{display:flex; align-items:center; gap:9px; margin-top:16px; font-size:14px; color:var(--tx3)}
+.check input{width:auto; box-shadow:none; accent-color:var(--green)}
+
+/* ---------- 按钮（胶囊 + 大写字距） ---------- */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+  border:none; border-radius:9999px; padding:10px 22px; font:700 14px/1 var(--font);
+  text-transform:uppercase; letter-spacing:1.6px; transition:.15s; user-select:none; color:var(--tx)}
+.btn:hover{transform:scale(1.03)}
+.btn:active{transform:scale(.98)}
+.btn.green{background:var(--green); color:#000}
+.btn.green:hover{background:#1fdf64}
+.btn.dark{background:var(--s2); color:var(--tx)}
+.btn.dark:hover{background:#2a2a2a}
+.btn.outline{background:transparent; color:var(--tx); box-shadow:inset 0 0 0 1px var(--bd2)}
+.btn.outline:hover{box-shadow:inset 0 0 0 1px var(--tx); color:var(--tx)}
+.btn.danger{background:transparent; color:var(--red); box-shadow:inset 0 0 0 1px var(--red)}
+.btn.danger:hover{background:rgba(243,114,127,.12)}
+.btn.sm{padding:7px 15px; font-size:12px; letter-spacing:1.4px}
+.btn:disabled{opacity:.4; cursor:not-allowed; transform:none}
+.btnrow{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
+
+/* ---------- 状态标签 ---------- */
+.tag{display:inline-block; padding:3px 9px; border-radius:9999px; font-size:10.5px; font-weight:600;
+  line-height:1.33; margin:2px 4px 2px 0; letter-spacing:.3px}
+.t-song{background:rgba(83,157,245,.16); color:var(--blue)}
+.t-album{background:rgba(255,164,43,.14); color:var(--orange)}
+.t-mv{background:var(--s3); color:var(--tx2)}
+.t-unread{background:rgba(255,164,43,.14); color:var(--orange)}
+.t-added{background:rgba(30,215,96,.15); color:var(--green)}
+.t-skip{background:var(--s3); color:var(--tx2)}
+.t-err{background:rgba(243,114,127,.15); color:var(--red)}
+
+/* ---------- 表格 ---------- */
+.tablewrap{overflow-x:auto; margin-top:14px}
+table{width:100%; border-collapse:collapse; font-size:12px}
+th{text-align:left; padding:9px 10px; color:var(--tx2); font-size:10.5px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.2px; border-bottom:1px solid var(--s3)}
+td{padding:11px 10px; border-bottom:1px solid var(--s2); color:var(--tx3); vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.03)}
+td b{color:var(--tx); font-weight:700}
+.mono{font:400 11px/1.5 Consolas,monospace; color:var(--tx2)}
+.chk{width:auto; accent-color:var(--green); vertical-align:middle}
+
+/* ---------- 摘要条 ---------- */
+.summary{background:var(--s2); border-radius:8px; padding:13px 17px; margin-top:14px;
+  font-size:14px; color:var(--tx3); box-shadow:var(--sh-in)}
+.summary b{color:var(--green); font-weight:700}
+
+/* ---------- 二维码区 ---------- */
+#qrbox{text-align:center; padding:18px 0 6px}
+.qrframe{width:190px; height:190px; margin:0 auto; border-radius:50%; background:#fff;
+  box-shadow:var(--sh-h); display:flex; align-items:center; justify-content:center}
+.qrframe .ph{color:#888; font-size:12px; letter-spacing:1.4px; text-transform:uppercase}
+#qrstate{margin-top:12px; font-size:12px; color:var(--tx2)}
+
+/* ---------- 日志 ---------- */
+#logpanel{background:var(--s1); border-radius:8px; margin-top:18px; overflow:hidden; box-shadow:var(--sh-m)}
+#loghead{display:flex; align-items:center; gap:12px; padding:13px 20px}
+#loghead b{font-size:14px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase}
+#logbody{height:210px; overflow:auto; padding:4px 20px 18px; font:400 12px/1.75 Consolas,monospace;
+  color:var(--tx2); white-space:pre-wrap}
+#logbody .hi{color:var(--green)}
+#logbody .er{color:var(--red)}
+#logbody .wr{color:var(--orange)}
+
+/* ---------- 文件链接 ---------- */
+.files a{display:inline-block; margin:6px 12px 0 0; color:var(--tx3); font-size:12px;
+  text-decoration:none; box-shadow:inset 0 -1px 0 var(--bd); padding-bottom:2px}
+.files a:hover{color:var(--green); box-shadow:inset 0 -1px 0 var(--green)}
+
+/* 预览横幅 */
+.banner{background:var(--s2); border-radius:9999px; padding:9px 18px; font-size:12px; color:var(--tx2);
+  display:flex; align-items:center; gap:10px; margin-bottom:18px; width:fit-content}
+.banner b{color:var(--green)}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <span class="dot"></span>
+  <span><b>样式预览</b> · Spotify 设计系统（awesome-design-md）· 示例数据取自真实采集 · 未修改现有代码</span>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    <h1>网易云私信 → 歌单</h1>
+  </div>
+  <div class="chips">
+    <span class="chip"><span class="dot"></span>API 服务 <b>正常</b></span>
+    <span class="chip"><span class="dot"></span>登录 <b>Lovely_Loverson</b></span>
+    <span class="chip">歌单 <b>私信收藏</b></span>
+    <span class="chip">记忆 <b>177 / 0 / 102</b></span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ① 连接与登录 -->
+  <section class="card">
+    <h2><span class="idx">1</span>连接与登录</h2>
+    <label>API 服务地址</label>
+    <div class="row">
+      <input value="http://localhost:3000">
+      <button class="btn outline sm">测试连接</button>
+    </div>
+    <div class="hint">启动服务：<code>npx @neteasecloudmusicapienhanced/api@latest</code></div>
+    <div id="qrbox">
+      <div class="qrframe"><span class="ph">QR Code</span></div>
+      <div id="qrstate">未登录 · 点击下方按钮生成二维码，用网易云手机端扫码</div>
+    </div>
+    <div class="btnrow" style="justify-content:center">
+      <button class="btn green">扫码登录</button>
+    </div>
+  </section>
+
+  <!-- ② 同步配置 -->
+  <section class="card">
+    <h2><span class="idx">2</span>同步配置</h2>
+    <label>目标歌单</label>
+    <div class="row">
+      <select><option>私信收藏（0首）</option><option>Lovely_Loverson喜欢的音乐（5562首）</option></select>
+      <button class="btn dark sm">刷新</button>
+    </div>
+    <div class="row">
+      <input placeholder="歌单名（找不到则自动创建）" value="私信收藏">
+      <input placeholder="或 歌单 ID（可空）">
+    </div>
+    <div class="row">
+      <div><label>每轮会话条数</label><input value="30"></div>
+      <div><label>每会话历史条数</label><input value="30"></div>
+    </div>
+    <div class="row">
+      <div><label>最大展开会话数</label><input value="20"></div>
+      <div><label>请求间隔（秒）</label><input value="2"></div>
+    </div>
+    <div class="row">
+      <div><label>专辑入库模式</label>
+        <select><option>整张专辑全部曲目</option><option>仅前 N 首</option></select></div>
+      <div><label>专辑最多取 N 首</label><input value="20"></div>
+    </div>
+    <div class="check"><input type="checkbox"> 私信里分享的【歌单】也批量入库</div>
+    <div class="btnrow"><button class="btn dark">保存配置</button></div>
+    <div class="hint">保存到 <code>config.json</code> · 采集与入库时即时生效</div>
+  </section>
+
+  <!-- ③ 同步执行 -->
+  <section class="card wide">
+    <h2><span class="idx">3</span>同步执行 · 先预览勾选，再入库</h2>
+    <div class="btnrow" style="margin-top:0">
+      <button class="btn green">采集计划</button>
+      <button class="btn dark">强制重新采集</button>
+      <button class="btn outline">入库已勾选</button>
+      <button class="btn outline">全部入库</button>
+    </div>
+    <div class="summary">
+      采集完成：可入库 <b>334</b> 组分享 / <b>896</b> 首 · 目标歌单现有 0 首 · 勾选后入库
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th style="width:34px"></th><th>来源</th><th>分享内容</th><th>可入库</th><th>曲目 ID 预览</th><th>状态</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" class="chk" checked></td>
+            <td><b>云音乐小秘书</b> <span class="tag t-unread">未读 227</span></td>
+            <td><span class="tag t-album">专辑 410548279</span></td>
+            <td><b>3</b> / 3</td>
+            <td class="mono">3462772632, 3462772633, 3462771710</td>
+            <td><span class="tag t-added">待入库</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="chk" checked></td>
+            <td><b>卡布叻_周深</b></td>
+            <td><span class="tag t-album">专辑 409423240</span></td>
+            <td><b>99</b> / 99</td>
+            <td class="mono">3430390693, 3430391448, 3431133358…</td>
+            <td><span class="tag t-added">待入库</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="chk" checked></td>
+            <td><b>范晓萱Mavis</b></td>
+            <td><span class="tag t-song">歌曲 230051</span><span class="tag t-album">专辑 408028116</span></td>
+            <td><b>2</b> / 2</td>
+            <td class="mono">3457793104, 3460148828</td>
+            <td><span class="tag t-added">待入库</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="chk" disabled></td>
+            <td><b>许飞</b></td>
+            <td><span class="tag t-mv">MV 34816278</span><span class="tag t-mv">不入库</span></td>
+            <td>0 / 0</td>
+            <td class="mono">-</td>
+            <td><span class="tag t-skip">已忽略</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="chk" disabled></td>
+            <td><b>Daoko_official</b></td>
+            <td><span class="tag t-album">专辑 248792873</span></td>
+            <td>0 / 1</td>
+            <td class="mono">-</td>
+            <td><span class="tag t-skip">已存在</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="chk" disabled></td>
+            <td><b>real_zhanghy</b></td>
+            <td><span class="tag t-album">专辑 397384172</span></td>
+            <td>0 / 0</td>
+            <td class="mono">-</td>
+            <td><span class="tag t-err">下架 404</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="hint">未勾选的分享保持「待处理」下次采集仍会出现 · 已存在的曲目自动跳过不重复入库</div>
+  </section>
+
+  <!-- ④ 记忆与审计 -->
+  <section class="card">
+    <h2><span class="idx">4</span>记忆与审计</h2>
+    <div class="row">
+      <select><option>全部事件</option><option>仅入库</option><option>仅跳过</option><option>仅失败</option></select>
+      <button class="btn dark sm">刷新</button>
+    </div>
+    <div class="tablewrap" style="max-height:300px; overflow:auto">
+      <table>
+        <thead><tr><th>时间</th><th>事件</th><th>来源</th><th>详情</th></tr></thead>
+        <tbody>
+          <tr><td>10:17:03</td><td><span class="tag t-skip">skip</span></td><td>Daoko_official</td><td>already_added</td></tr>
+          <tr><td>10:17:03</td><td><span class="tag t-skip">skip</span></td><td>阿云嘎Musical</td><td>unsupported_type · MV 22667961</td></tr>
+          <tr><td>10:17:03</td><td><span class="tag t-err">error</span></td><td>real_zhanghy</td><td>专辑 397384172 解析失败：404</td></tr>
+          <tr><td>10:17:03</td><td><span class="tag t-skip">skip</span></td><td>云音乐小秘书</td><td>unsupported_type · MV 34820857</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="btnrow"><button class="btn danger">清空本地记忆</button></div>
+    <div class="hint">记忆含 state.json（去重）与审计流水 · 清空后仍有歌单内容查重兜底</div>
+  </section>
+
+  <!-- ⑤ 报文探测与文件 -->
+  <section class="card">
+    <h2><span class="idx">5</span>报文探测与输出文件</h2>
+    <div class="btnrow" style="margin-top:0">
+      <button class="btn dark">抓取私信报文</button>
+      <button class="btn outline">打开数据目录</button>
+    </div>
+    <div class="files">
+      <a href="#">config.json</a><a href="#">state.json</a>
+      <a href="#">sync_history.jsonl</a><a href="#">discover_dump.json</a>
+    </div>
+    <div class="hint">探测结果用于校准私信报文解析 · 入库明细在审计流水中</div>
+  </section>
+</div>
+
+<!-- ⑥ 运行日志 -->
+<div id="logpanel">
+  <div id="loghead">
+    <b>运行日志</b>
+    <span class="hint" style="margin:0">460 行</span>
+    <span style="margin-left:auto; display:flex; gap:8px">
+      <button class="btn dark sm">清空显示</button>
+      <button class="btn dark sm">折叠</button>
+    </span>
+  </div>
+  <div id="logbody"><span class="hi">[10:13:11]   AriAbdul_CN：可入库 1 首 [2709660588]</span>
+[10:13:12]   AriAbdul_CN：可入库 2 首 [2699676964, 2699677815]
+<span class="wr">[10:13:30]   专辑 154404340 解析失败：HTTP Error 404: Not Found</span>
+[10:14:32]   Faouzia：仅 MV/不支持类型 [['mv', 34724149]]（识别但不入库）
+[10:15:02]   MADILYN_official：仅 MV/不支持类型 [['mv', 22605546]]（识别但不入库）
+[10:16:04]   Daoko_official：全部 1 首已在歌单/入库记忆中
+<span class="hi">[10:16:21] 计划采集完成：334 组分享 / 896 首待入库</span></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+# 本地运行数据与敏感信息，不入库
+cookies.json
+config.json
+state.json
+sync_history.jsonl
+discover_dump.json
+last_plan.json
+sync.log
+qr.png
+
+# Python
+__pycache__/
+*.pyc
+
+# 系统
+Thumbs.db
+.DS_Store

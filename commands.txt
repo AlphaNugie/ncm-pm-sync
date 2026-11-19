@@ -1,0 +1,3 @@
+copy config.example.json config.json
+
+C:\Users\a1231\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\python.exe ncm_sync.py login
