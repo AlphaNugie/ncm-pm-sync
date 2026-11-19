@@ -568,13 +568,30 @@ def enrich_plan_names(c: NcmClient, plan: list[dict], only_missing: bool = True)
     return calls
 
 
+def resp_code(res: Any) -> Any:
+    """
+    兼容不同模块的响应包装取 code。
+    多数接口：顶层 {code: 200, ...}；
+    /playlist/tracks 在 api-enhanced 里被包了一层：{status, body:{code,...}, cookie:[...]}（双层嵌套）。
+    """
+    if isinstance(res, dict):
+        if res.get("code") is not None:
+            return res.get("code")
+        body = res.get("body")
+        if isinstance(body, dict):
+            return body.get("code")
+    return None
+
+
 def add_tracks(c: NcmClient, pid: int, track_ids: list[int]) -> dict:
     result: dict[str, Any] = {}
     for i in range(0, len(track_ids), 100):
         batch = track_ids[i : i + 100]
         result = c.post("/playlist/tracks", op="add", pid=pid, tracks=",".join(map(str, batch)))
-        log(f"  入库 {len(batch)} 首 -> code={result.get('code')}")
-        if result.get("code") != 200:
+        code = resp_code(result)
+        log(f"  入库 {len(batch)} 首 -> code={code}")
+        if code != 200:
+            log(f"  入库原始返回：{json.dumps(result, ensure_ascii=False)[:300]}")
             break
     return result
 
@@ -819,8 +836,14 @@ def commit_plan(cfg: dict, plan_result: dict, chosen_msg_ids: list[str] | None =
         # 4) 用户未勾选：保持待处理
         if mid not in chosen:
             continue
-        res = add_tracks(client, pid, it["new_track_ids"])
-        if res.get("code") == 200:
+        try:
+            res = add_tracks(client, pid, it["new_track_ids"])
+        except Exception as e:  # noqa: BLE001 网络抖动等，不中断整批
+            log(f"  入库异常：{e}")
+            record_event(cfg, "error", msg_id=mid, sender=it.get("sender_label") or it["sender"], error=str(e))
+            errors += 1
+            continue
+        if resp_code(res) == 200:
             added.update(it["new_track_ids"])
             added_msgs += 1
             added_tracks += len(it["new_track_ids"])
