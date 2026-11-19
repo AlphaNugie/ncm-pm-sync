@@ -684,6 +684,7 @@ pre.jsonview{background:var(--s2); border-radius:8px; padding:14px; max-height:3
       <button class="btn green" id="btnPlan" onclick="doPlan(false)">采集计划</button>
       <button class="btn dark" id="btnPlanForce" onclick="doPlan(true)">强制重新采集</button>
       <button class="btn outline" id="btnCheckUnread" onclick="checkUnread()" disabled>勾选未读</button>
+      <button class="btn outline" id="btnCheckUndet" onclick="checkUndet()" disabled>勾选状态未定</button>
       <button class="btn outline" id="btnCommitSel" onclick="doCommit(false)" disabled>入库已勾选</button>
       <button class="btn outline" id="btnCommitAll" onclick="doCommit(true)" disabled>全部入库</button>
     </div>
@@ -933,7 +934,8 @@ function planRow(it) {
   const isRead = it.msg_unread === false;   // 推导已读
   const un = it.msg_unread === true
     ? `<span class="tag t-unread" title="推导未读${it.unread ? ' · 会话未读 ' + it.unread : ''}">未读</span>`
-    : isRead ? '<span class="tag t-skip" title="推导已读（会话未读数之外的消息）">已读</span>' : '';
+    : isRead ? '<span class="tag t-skip" title="推导已读（会话未读数之外的消息）">已读</span>'
+    : '<span class="tag t-skip" title="无法判定已读/未读（该会话未带未读数字段）">未定</span>';
   const ignored = (it.ignored && it.ignored.length)
     ? shareTags(it.ignored) + '<span class="tag t-mv">不入库</span>' : '';
   const chk = it.in_playlist ? 'disabled' : (isNew ? (isRead ? '' : 'checked') : 'disabled');  // 已入库/已读不预勾
@@ -942,7 +944,7 @@ function planRow(it) {
     : already ? '<span class="tag t-skip">已存在</span>'
     : (it.shares.length ? '<span class="tag t-err">无曲目</span>' : '<span class="tag t-skip">已忽略</span>');
   return `<tr>
-    <td><input type="checkbox" class="chk rowchk" data-mid="${it.msg_id}" data-unread="${it.msg_unread === true ? 1 : 0}" ${chk}></td>
+    <td><input type="checkbox" class="chk rowchk" data-mid="${it.msg_id}" data-unread="${it.msg_unread === true ? 1 : 0}" data-undet="${it.msg_unread == null ? 1 : 0}" ${chk}></td>
     <td><b>${it.sender_label || it.sender}</b> ${un}</td>
     <td>${shareTags(it.shares)}${ignored}</td>
     <td><b>${it.new_track_ids.length}</b> / ${it.track_ids.length}</td>
@@ -964,7 +966,7 @@ function renderPlan(plan, summary, cached) {
     `采集完成${cached ? '（10 分钟内缓存，点「强制重新采集」刷新）' : ''}：可入库 <b>${summary.groups}</b> 组分享 / <b>${summary.tracks}</b> 首；` +
     `目标歌单现有 ${PLAN_DATA.existing_count} 首。勾选后点「入库已勾选」，或直接「全部入库」。`;
   $('btnCommitSel').disabled = $('btnCommitAll').disabled = summary.groups === 0;
-  $('btnCheckUnread').disabled = items.length === 0;
+  $('btnCheckUnread').disabled = $('btnCheckUndet').disabled = items.length === 0;
   $('chkAll').checked = summary.groups > 0;
 }
 
@@ -981,6 +983,17 @@ function checkUnread() {
     n++;
   });
   toast(n ? `已勾选 ${n} 条推导未读` : '没有可勾选的推导未读条目', n ? 'ok' : 'err');
+}
+
+function checkUndet() {
+  // 把所有状态未定（无法判定已读/未读）的行强制打钩；MV/已存在等禁用行天然忽略
+  let n = 0;
+  document.querySelectorAll('.rowchk[data-undet="1"]').forEach(c => {
+    if (c.disabled) return;
+    c.checked = true;
+    n++;
+  });
+  toast(n ? `已勾选 ${n} 条状态未定` : '没有可勾选的状态未定条目', n ? 'ok' : 'err');
 }
 
 async function doPlan(force) {
