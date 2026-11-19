@@ -215,6 +215,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/playlists" and method == "GET":
             return self._playlists()
 
+        if path == "/api/playlist-state" and method == "GET":
+            return self._playlist_state()
+
         if path == "/api/plan" and method == "POST":
             return self._plan()
 
@@ -334,6 +337,35 @@ class Handler(BaseHTTPRequestHandler):
             core.log("名称补查完成，已更新缓存")
         except Exception as e:  # noqa: BLE001
             core.log(f"名称补查失败（不影响使用，缺名处显示 ID）：{e}")
+
+    def _playlist_state(self) -> None:
+        """返回目标歌单当前曲目 id 列表（执行后按歌单真实状态刷新界面）。"""
+        try:
+            cfg = load_cfg()
+            c = core.NcmClient(cfg)
+            if not c.load_cookie(HERE / cfg["cookie_file"]):
+                return self._err("未登录")
+            pid = None
+            if LAST_PLAN and LAST_PLAN.get("playlist_id"):
+                pid = int(LAST_PLAN["playlist_id"])
+            elif cfg.get("playlist_id"):
+                pid = int(cfg["playlist_id"])
+            else:
+                acc = c.get("/user/account")
+                profile = acc.get("profile") or (acc.get("data") or {}).get("profile") or {}
+                uid = profile.get("userId") or (acc.get("data") or {}).get("userId")
+                if uid:
+                    data = c.get("/user/playlist", uid=int(uid), limit=100)
+                    for pl in data.get("playlist", []):
+                        if pl.get("name") == cfg.get("playlist_name"):
+                            pid = int(pl["id"])
+                            break
+            if not pid:
+                return self._err("未找到目标歌单（先采集一次或在配置里填歌单 ID）")
+            ids = [i for i, _ in core.playlist_track_ids(c, pid, cfg)]
+            return self._ok(playlist_id=pid, track_ids=ids)
+        except Exception as e:  # noqa: BLE001
+            return self._err(str(e))
 
     def _plan(self) -> None:
         global LAST_PLAN, LAST_PLAN_AT
@@ -904,14 +936,18 @@ function planRow(it) {
     : isRead ? '<span class="tag t-skip" title="推导已读（会话未读数之外的消息）">已读</span>' : '';
   const ignored = (it.ignored && it.ignored.length)
     ? shareTags(it.ignored) + '<span class="tag t-mv">不入库</span>' : '';
-  const chk = isNew ? (isRead ? '' : 'checked') : 'disabled';  // 已读不预勾
+  const chk = it.in_playlist ? 'disabled' : (isNew ? (isRead ? '' : 'checked') : 'disabled');  // 已入库/已读不预勾
+  const status = it.in_playlist ? '<span class="tag t-added">已入库</span>'
+    : isNew ? '<span class="tag t-added">待入库</span>'
+    : already ? '<span class="tag t-skip">已存在</span>'
+    : (it.shares.length ? '<span class="tag t-err">无曲目</span>' : '<span class="tag t-skip">已忽略</span>');
   return `<tr>
     <td><input type="checkbox" class="chk rowchk" data-mid="${it.msg_id}" data-unread="${it.msg_unread === true ? 1 : 0}" ${chk}></td>
     <td><b>${it.sender_label || it.sender}</b> ${un}</td>
     <td>${shareTags(it.shares)}${ignored}</td>
     <td><b>${it.new_track_ids.length}</b> / ${it.track_ids.length}</td>
     <td>${isNew ? trackPreview(it) : '<span class="mono">-</span>'}</td>
-    <td>${isNew ? '<span class="tag t-added">待入库</span>' : already ? '<span class="tag t-skip">已存在</span>' : (it.shares.length ? '<span class="tag t-err">无曲目</span>' : '<span class="tag t-skip">已忽略</span>')}
+    <td>${status}
         ${it.errors && it.errors.length ? '<span class="tag t-err">' + it.errors.join('; ') + '</span>' : ''}</td>
   </tr>`;
 }
@@ -956,12 +992,39 @@ async function doPlan(force) {
     const r = await api('/api/plan', {method: 'POST', body: {refresh: !!force}});
     PLAN_DATA = r.plan;
     renderPlan(r.plan, r.summary, r.cached);
+    refreshFromPlaylist();   // 按歌单真实状态校准（已入库/已存在 -> 已入库）
   } catch (e) { toast(e.message, 'err'); $('planSummary').textContent = '采集失败：' + e.message; }
   finally { busy(btn, false); refreshStatus(); }
 }
 
 async function saveConfigSilent() {
   await api('/api/config', {method: 'POST', body: configFromForm()});
+}
+
+async function refreshFromPlaylist() {
+  // 执行后按歌单真实状态刷新：曲目已全部在歌单的行 -> 已入库 + 取消勾选（未读标签保留）
+  try {
+    const r = await api('/api/playlist-state');
+    const set = new Set(r.track_ids);
+    let n = 0;
+    ((PLAN_DATA && PLAN_DATA.plan) || []).forEach(it => {
+      const tid = it.track_ids || [];
+      if (!tid.length) return;                       // MV/忽略行不动
+      if (!tid.every(t => set.has(t))) return;
+      it.in_playlist = true;
+      const chk = document.querySelector(`.rowchk[data-mid="${it.msg_id}"]`);
+      if (!chk) return;
+      chk.checked = false;
+      chk.disabled = true;
+      const tr = chk.closest('tr');
+      if (tr && tr.lastElementChild) {
+        tr.lastElementChild.innerHTML = '<span class="tag t-added">已入库</span>';
+      }
+      n++;
+    });
+    if (n >= 0) refreshStatus();
+    return n;
+  } catch (e) { toast(e.message, 'err'); return -1; }
 }
 
 async function doCommit(all) {
@@ -974,6 +1037,7 @@ async function doCommit(all) {
     const s = r.summary;
     toast(`入库完成：${s.added_msgs} 组 / ${s.added_tracks} 首（跳过 ${s.skipped}，失败 ${s.errors}）`, 'ok');
     $('planSummary').innerHTML += `<br>上次执行结果：入库 ${s.added_msgs} 组 / ${s.added_tracks} 首，跳过 ${s.skipped}，失败 ${s.errors}，仍待处理 ${s.pending}`;
+    await refreshFromPlaylist();   // 执行后查歌单真实状态，把已入库的行刷新并取消勾选
     loadHistory(); refreshStatus();
   } catch (e) { toast(e.message, 'err'); }
   finally { busy(btn, false); }
