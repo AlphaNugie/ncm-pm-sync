@@ -651,6 +651,7 @@ pre.jsonview{background:var(--s2); border-radius:8px; padding:14px; max-height:3
     <div class="btnrow" style="margin-top:0">
       <button class="btn green" id="btnPlan" onclick="doPlan(false)">采集计划</button>
       <button class="btn dark" id="btnPlanForce" onclick="doPlan(true)">强制重新采集</button>
+      <button class="btn outline" id="btnCheckUnread" onclick="checkUnread()" disabled>勾选未读</button>
       <button class="btn outline" id="btnCommitSel" onclick="doCommit(false)" disabled>入库已勾选</button>
       <button class="btn outline" id="btnCommitAll" onclick="doCommit(true)" disabled>全部入库</button>
     </div>
@@ -927,11 +928,23 @@ function renderPlan(plan, summary, cached) {
     `采集完成${cached ? '（10 分钟内缓存，点「强制重新采集」刷新）' : ''}：可入库 <b>${summary.groups}</b> 组分享 / <b>${summary.tracks}</b> 首；` +
     `目标歌单现有 ${PLAN_DATA.existing_count} 首。勾选后点「入库已勾选」，或直接「全部入库」。`;
   $('btnCommitSel').disabled = $('btnCommitAll').disabled = summary.groups === 0;
+  $('btnCheckUnread').disabled = items.length === 0;
   $('chkAll').checked = summary.groups > 0;
 }
 
 function toggleAll(el) {
   document.querySelectorAll('.rowchk:not(:disabled)').forEach(c => c.checked = el.checked);
+}
+
+function checkUnread() {
+  // 把所有推导未读的行强制打钩（不管之前状态）；MV/已存在等禁用行天然忽略
+  let n = 0;
+  document.querySelectorAll('.rowchk[data-unread="1"]').forEach(c => {
+    if (c.disabled) return;
+    c.checked = true;
+    n++;
+  });
+  toast(n ? `已勾选 ${n} 条推导未读` : '没有可勾选的推导未读条目', n ? 'ok' : 'err');
 }
 
 async function doPlan(force) {
