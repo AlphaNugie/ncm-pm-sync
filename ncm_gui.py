@@ -897,11 +897,15 @@ function trackPreview(it) {
 function planRow(it) {
   const isNew = it.new_track_ids.length > 0;
   const already = !isNew && it.track_ids.length > 0;
-  const un = (it.unread && it.unread > 0) ? `<span class="tag t-unread">未读 ${it.unread}</span>` : '';
+  const isRead = it.msg_unread === false;   // 推导已读
+  const un = it.msg_unread === true
+    ? `<span class="tag t-unread" title="推导未读${it.unread ? ' · 会话未读 ' + it.unread : ''}">未读</span>`
+    : isRead ? '<span class="tag t-skip" title="推导已读（会话未读数之外的消息）">已读</span>' : '';
   const ignored = (it.ignored && it.ignored.length)
     ? shareTags(it.ignored) + '<span class="tag t-mv">不入库</span>' : '';
+  const chk = isNew ? (isRead ? '' : 'checked') : 'disabled';  // 已读不预勾
   return `<tr>
-    <td><input type="checkbox" class="chk rowchk" data-mid="${it.msg_id}" ${isNew ? 'checked' : 'disabled'}></td>
+    <td><input type="checkbox" class="chk rowchk" data-mid="${it.msg_id}" data-unread="${it.msg_unread === true ? 1 : 0}" ${chk}></td>
     <td><b>${it.sender_label || it.sender}</b> ${un}</td>
     <td>${shareTags(it.shares)}${ignored}</td>
     <td><b>${it.new_track_ids.length}</b> / ${it.track_ids.length}</td>

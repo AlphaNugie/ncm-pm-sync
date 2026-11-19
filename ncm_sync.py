@@ -585,6 +585,45 @@ def add_tracks(c: NcmClient, pid: int, track_ids: list[int]) -> dict:
 # ----------------------------------------------------------------------------
 
 
+def derive_unread_ids(items: list[tuple[dict, int | None]]) -> tuple[set[str], set[str]]:
+    """
+    推导单条消息的已读/未读（接口不下发显式已读标记）。
+    规则：会话未读数 N（newMsgCount）= 该会话按时间倒序最新的 N 条未读。
+    返回 (未读消息键集合, 参与推导的消息键集合)；会话无未读数字段时不做推导（不在后者中）。
+    """
+    budget: dict[int, int] = {}
+    timed: dict[int, list[tuple[int, str]]] = {}
+    for item, cuid in items:
+        if not cuid:
+            continue
+        n = item.get("newMsgCount")
+        if n is not None:
+            budget[cuid] = max(budget.get(cuid, 0), int(n))
+        t = item.get("time") or item.get("msgTime") or item.get("lastMsgTime")
+        mid = msg_key(item, cuid)
+        if mid and t:
+            timed.setdefault(cuid, []).append((int(t), mid))
+    unread: set[str] = set()
+    derived: set[str] = set()
+    for uid, lst in timed.items():
+        if uid not in budget:
+            continue
+        n = budget[uid]
+        seen: set[str] = set()
+        count = 0
+        for _, mid in sorted(lst, key=lambda x: -x[0]):
+            if mid in seen:
+                continue
+            seen.add(mid)
+            derived.add(mid)
+            if count < n:
+                unread.add(mid)
+                count += 1
+            else:
+                break
+    return unread, derived
+
+
 def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
     """
     只读采集同步计划，不做任何入库/状态写入。
@@ -632,6 +671,9 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
         except Exception as e:  # noqa: BLE001
             log(f"  会话 uid={cuid} 历史拉取失败：{e}")
     log(f"阶段2 累计待解析条目 {len(items)} 条")
+    unread_ids, derived_ids = derive_unread_ids(items)  # 推导单条未读：会话未读数 N = 最新 N 条
+    if derived_ids:
+        log(f"推导未读消息 {len(unread_ids)}/{len(derived_ids)} 条（会话未读数 N=最新 N 条）")
 
     plan: list[dict] = []
     scanned_ids: list[str] = []
@@ -688,6 +730,7 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
             reserved.add(t)
         plan.append({
             "msg_id": mid or f"anon-{len(plan)}",
+            "msg_unread": (mid in unread_ids) if (mid and mid in derived_ids) else None,
             "sender": str(sender),
             "sender_label": sender_label(str(sender), all_shares),
             "read_flag": rf,
@@ -708,6 +751,8 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
 
     # 报文/响应里缺名的曲目批量补查（多数情况下为 0 次请求）
     enrich_plan_names(client, plan)
+    # 推导未读/无法判定的排前，推导已读的靠后（稳定排序，同组内保持原顺序）
+    plan.sort(key=lambda it: 0 if it.get("msg_unread") is not False else 1)
 
     return {
         "own_uid": own_uid,
@@ -748,7 +793,7 @@ def commit_plan(cfg: dict, plan_result: dict, chosen_msg_ids: list[str] | None =
         # 1) 无可入库类型（仅 MV/分享歌单未开启等）：直接记已处理，不打扰用户
         if not it.get("shares"):
             record_event(cfg, "skip", msg_id=mid, sender=it.get("sender_label") or it["sender"], reason="unsupported_type",
-                         ignored=it.get("ignored"), read_flag=it.get("read_flag"))
+                         ignored=it.get("ignored"), read_flag=it.get("read_flag"), msg_unread=it.get("msg_unread"))
             skipped += 1
             processed.add(mid)
             continue
@@ -762,12 +807,12 @@ def commit_plan(cfg: dict, plan_result: dict, chosen_msg_ids: list[str] | None =
         if not it["new_track_ids"]:
             if it["track_ids"]:
                 record_event(cfg, "skip", msg_id=mid, sender=it.get("sender_label") or it["sender"], reason="already_added",
-                             shares=it["shares"], read_flag=it.get("read_flag"))
+                             shares=it["shares"], read_flag=it.get("read_flag"), msg_unread=it.get("msg_unread"))
                 skipped += 1
                 processed.add(mid)
             else:
                 record_event(cfg, "skip", msg_id=mid, sender=it.get("sender_label") or it["sender"], reason="no_tracks",
-                             shares=it["shares"], read_flag=it.get("read_flag"))
+                             shares=it["shares"], read_flag=it.get("read_flag"), msg_unread=it.get("msg_unread"))
                 skipped += 1
                 processed.add(mid)
             continue
@@ -783,7 +828,7 @@ def commit_plan(cfg: dict, plan_result: dict, chosen_msg_ids: list[str] | None =
             log(f"  已入库 {len(it['new_track_ids'])} 首（来自 {it['sender']}）")
             record_event(cfg, "added", msg_id=mid, sender=it.get("sender_label") or it["sender"], count=len(it["new_track_ids"]),
                          track_ids=it["new_track_ids"], shares=it["shares"],
-                         read_flag=it.get("read_flag"), playlist_id=pid)
+                         read_flag=it.get("read_flag"), msg_unread=it.get("msg_unread"), playlist_id=pid)
         else:
             errors += 1
             log(f"  入库失败：{res}")
@@ -804,7 +849,7 @@ def cmd_sync(cfg: dict, dry_run: bool) -> None:
             if it["new_track_ids"]:
                 record_event(cfg, "dry_run", msg_id=it["msg_id"], sender=it.get("sender_label") or it["sender"],
                              count=len(it["new_track_ids"]), track_ids=it["new_track_ids"],
-                             shares=it["shares"], read_flag=it.get("read_flag"))
+                             shares=it["shares"], read_flag=it.get("read_flag"), msg_unread=it.get("msg_unread"))
         log(f"[dry-run] 完成：{sum(1 for it in res['plan'] if it['new_track_ids'])} 组分享待入库")
         return
     summary = commit_plan(cfg, res)
