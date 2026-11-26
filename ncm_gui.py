@@ -948,7 +948,7 @@ function planRow(it) {
     : '<span class="tag t-skip" title="无法判定已读/未读（该会话未带未读数字段）">未定</span>';
   const ignored = (it.ignored && it.ignored.length)
     ? shareTags(it.ignored) + '<span class="tag t-mv">不入库</span>' : '';
-  const chk = it.in_playlist ? 'disabled' : (isNew ? (isRead ? '' : 'checked') : 'disabled');  // 已入库/已读不预勾
+  const chk = it.in_playlist ? 'disabled' : (isNew ? (it.msg_unread === true ? 'checked' : '') : 'disabled');  // 已入库/仅推导未读预勾
   const status = it.in_playlist ? '<span class="tag t-added">已入库</span>'
     : isNew ? '<span class="tag t-added">待入库</span>'
     : already ? '<span class="tag t-skip">已存在</span>'
