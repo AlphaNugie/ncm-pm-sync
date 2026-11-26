@@ -1,4 +1,5 @@
 @echo off
-rem 缃戞槗浜戠淇♀啋姝屽崟 缃戦〉绠＄悊鐣岄潰锛堝惎鍔ㄥ悗鑷姩鎵撳紑娴忚鍣級
+rem 网易云私信→歌单 网页管理界面（启动后自动打开浏览器）
 cd /d "%~dp0"
-python ncm_gui.py
+:: python ncm_gui.py
+C:\Users\a1231\AppData\Roaming\uv\python\cpython-3.12.13-windows-x86_64-none\python.exe ncm_gui.py
