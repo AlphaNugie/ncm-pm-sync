@@ -73,6 +73,7 @@ DEFAULT_CONFIG = {
     "album_mode": "all",          # all = 整张专辑入库; first_n = 只收前 N 首
     "max_album_tracks": 20,
     "also_add_shared_playlist": False,  # 私信里分享的歌单是否也批量入库
+    "album_tracks_reverse": False,  # 专辑曲目倒序入库（保证整张专辑在歌单内正序排列）
     "private_msg_path": "/msg/private",              # 已核实
     "private_history_path": "/msg/private/history",  # 已核实
     "max_state_ids": 2000,
@@ -725,7 +726,10 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
                 track_names.setdefault(rid, sname)
             elif kind == "album":
                 try:
-                    for tid, tname in album_track_ids(client, rid, cfg):
+                    pairs = album_track_ids(client, rid, cfg)
+                    if cfg.get("album_tracks_reverse"):
+                        pairs = pairs[::-1]  # 倒序入库：歌单新曲靠前插入，倒序收才能正序收听
+                    for tid, tname in pairs:
                         to_add.append(tid)
                         track_names.setdefault(tid, tname)
                 except Exception as e:  # noqa: BLE001

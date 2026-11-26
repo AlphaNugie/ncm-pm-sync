@@ -673,6 +673,9 @@ pre.jsonview{background:var(--s2); border-radius:8px; padding:14px; max-height:3
     <div class="check">
       <input type="checkbox" id="alsoPl" style="width:auto"> 私信里分享的【歌单】也批量入库
     </div>
+    <div class="check">
+      <input type="checkbox" id="albumRev" style="width:auto" title="为保证在歌单内正序排列"> 专辑曲目倒序入库
+    </div>
     <div class="btnrow"><button class="btn dark" onclick="saveConfig()">保存配置</button></div>
     <div class="hint">保存到 <code>config.json</code> · 计划采集与入库时即时生效</div>
   </section>
@@ -858,6 +861,7 @@ async function loadConfig() {
     $('albumMode').value = c.album_mode;
     $('albumMax').value = c.max_album_tracks;
     $('alsoPl').checked = !!c.also_add_shared_playlist;
+    $('albumRev').checked = !!c.album_tracks_reverse;
   } catch (e) { toast(e.message, 'err'); }
 }
 
@@ -872,7 +876,8 @@ function configFromForm() {
     request_interval_sec: Number($('interval').value) || 2,
     album_mode: $('albumMode').value,
     max_album_tracks: Number($('albumMax').value) || 20,
-    also_add_shared_playlist: $('alsoPl').checked
+    also_add_shared_playlist: $('alsoPl').checked,
+    album_tracks_reverse: $('albumRev').checked
   };
 }
 
