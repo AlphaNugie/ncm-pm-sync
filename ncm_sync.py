@@ -74,6 +74,7 @@ DEFAULT_CONFIG = {
     "max_album_tracks": 20,
     "also_add_shared_playlist": False,  # 私信里分享的歌单是否也批量入库
     "album_tracks_reverse": False,  # 专辑曲目倒序入库（保证整张专辑在歌单内正序排列）
+    "secretary_first": True,        # 云音乐小秘书条目排最前，排重以小秘书为基准（防专辑被切割）
     "private_msg_path": "/msg/private",              # 已核实
     "private_history_path": "/msg/private/history",  # 已核实
     "max_state_ids": 2000,
@@ -692,6 +693,10 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
     unread_ids, derived_ids = derive_unread_ids(items)  # 推导单条未读：会话未读数 N = 最新 N 条
     if derived_ids:
         log(f"推导未读消息 {len(unread_ids)}/{len(derived_ids)} 条（会话未读数 N=最新 N 条）")
+    if cfg.get("secretary_first"):
+        # 小秘书条目先解析：同轮排重以其为基准，避免专辑被歌手个人私信里的重复曲目切割
+        items.sort(key=lambda e: 0 if "小秘书" in str((e[0].get("fromUser") or {}).get("nickname") or "") else 1)
+        log("小秘书优先：其条目先解析，排重以小秘书为基准")
 
     plan: list[dict] = []
     scanned_ids: list[str] = []
@@ -772,8 +777,12 @@ def collect_plan(cfg: dict, c: NcmClient | None = None) -> dict:
 
     # 报文/响应里缺名的曲目批量补查（多数情况下为 0 次请求）
     enrich_plan_names(client, plan)
-    # 推导未读/无法判定的排前，推导已读的靠后（稳定排序，同组内保持原顺序）
-    plan.sort(key=lambda it: 0 if it.get("msg_unread") is not False else 1)
+    # 排序：小秘书优先后其条目在最前；组内推导未读/无法判定的排前，推导已读的靠后（稳定排序）
+    if cfg.get("secretary_first"):
+        plan.sort(key=lambda it: (0 if "小秘书" in str(it.get("sender") or "") else 1,
+                                  0 if it.get("msg_unread") is not False else 1))
+    else:
+        plan.sort(key=lambda it: 0 if it.get("msg_unread") is not False else 1)
 
     return {
         "own_uid": own_uid,

@@ -13,6 +13,7 @@
   "max_album_tracks": 20,
   "also_add_shared_playlist": false,
   "album_tracks_reverse": false,
+  "secretary_first": true,
   "private_msg_path": "/msg/private",
   "private_history_path": "/msg/private/history",
   "max_state_ids": 2000,

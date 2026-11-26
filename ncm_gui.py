@@ -676,6 +676,9 @@ pre.jsonview{background:var(--s2); border-radius:8px; padding:14px; max-height:3
     <div class="check">
       <input type="checkbox" id="albumRev" style="width:auto" title="为保证在歌单内正序排列"> 专辑曲目倒序入库
     </div>
+    <div class="check">
+      <input type="checkbox" id="secFirst" style="width:auto" checked title="小秘书条目排最前；排重曲目以小秘书为基准，避免专辑被歌手个人私信切割"> 云音乐小秘书优先
+    </div>
     <div class="btnrow"><button class="btn dark" onclick="saveConfig()">保存配置</button></div>
     <div class="hint">保存到 <code>config.json</code> · 计划采集与入库时即时生效</div>
   </section>
@@ -862,6 +865,7 @@ async function loadConfig() {
     $('albumMax').value = c.max_album_tracks;
     $('alsoPl').checked = !!c.also_add_shared_playlist;
     $('albumRev').checked = !!c.album_tracks_reverse;
+    $('secFirst').checked = c.secretary_first !== false;  // 默认勾选
   } catch (e) { toast(e.message, 'err'); }
 }
 
@@ -877,7 +881,8 @@ function configFromForm() {
     album_mode: $('albumMode').value,
     max_album_tracks: Number($('albumMax').value) || 20,
     also_add_shared_playlist: $('alsoPl').checked,
-    album_tracks_reverse: $('albumRev').checked
+    album_tracks_reverse: $('albumRev').checked,
+    secretary_first: $('secFirst').checked
   };
 }
 
